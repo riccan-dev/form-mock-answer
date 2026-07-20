@@ -17,7 +17,7 @@ export default async function PreviewFormPage({
     <>
       <div className="d-flex align-items-center justify-content-between px-4 py-3">
         <h1 className="fs-4 fw-bold mb-0">プレビュー (ID: {form.id})</h1>
-        <Link href="/" className="btn btn-outline-secondary">
+        <Link href="/admin" className="btn btn-outline-secondary">
           一覧へ戻る
         </Link>
       </div>
@@ -26,9 +26,6 @@ export default async function PreviewFormPage({
         <dl className="row mb-0">
           <dt className="col-sm-3">フォーム名</dt>
           <dd className="col-sm-9">{form.name}</dd>
-
-          <dt className="col-sm-3">フォームタイプ</dt>
-          <dd className="col-sm-9">{form.type}</dd>
 
           <dt className="col-sm-3">公開状況</dt>
           <dd className="col-sm-9">{form.status}</dd>

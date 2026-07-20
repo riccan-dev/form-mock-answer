@@ -1,6 +1,7 @@
 'use client';
 
 import { use } from 'react';
+import Link from 'next/link';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import { findFormById } from '@/lib/mockForms';
@@ -22,9 +23,9 @@ export default function EditFormPage({
       <div className="d-flex align-items-center justify-content-between px-4 py-3">
         <h1 className="fs-4 fw-bold mb-0">フォーム編集 (ID: {form.id})</h1>
         <div className="d-flex gap-2">
-          <Button as="a" href="/" variant="outline-secondary">
+          <Link href="/admin" className="btn btn-outline-secondary">
             キャンセル
-          </Button>
+          </Link>
           <Button variant="primary">保存</Button>
         </div>
       </div>
@@ -36,30 +37,28 @@ export default function EditFormPage({
             <Form.Control type="text" defaultValue={form.name} />
           </Form.Group>
 
-          <Form.Group className="mb-3" controlId="formType">
-            <Form.Label>フォームタイプ</Form.Label>
-            <Form.Select defaultValue={form.type}>
-              <option>新規・更新登録フォーム</option>
-              <option>アンケートフォーム</option>
-              <option>ウェビナーアンケート</option>
-            </Form.Select>
-          </Form.Group>
-
           <Form.Group controlId="formStatus">
-            <Form.Label className="d-block">公開状況</Form.Label>
+            <Form.Label className="d-block">ステータス</Form.Label>
             <Form.Check
               inline
-              label="公開"
+              label="下書き"
               name="status"
               type="radio"
-              defaultChecked={form.status === '公開'}
+              defaultChecked={form.status === '下書き'}
             />
             <Form.Check
               inline
-              label="非公開"
+              label="配信中"
               name="status"
               type="radio"
-              defaultChecked={form.status === '非公開'}
+              defaultChecked={form.status === '配信中'}
+            />
+            <Form.Check
+              inline
+              label="回収終了"
+              name="status"
+              type="radio"
+              defaultChecked={form.status === '回収終了'}
             />
           </Form.Group>
         </Form>
