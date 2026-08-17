@@ -1,0 +1,12 @@
+package com.example.demo.domain.dto;
+
+import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+public class ErrorResponse {
+	private List<FieldError> errors;
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>アンケートアプリ</title>
+	<link rel="stylesheet" th:href="@{/style.css}">
+</head>
+
+<body>
+	<header class="header">
+		<h1>アンケートアプリ</h1>
+	</header>
+
+	<main class="container">
+		<div class="card">
+			<p>ようこそ。このアプリではアンケートの作成・回答・集計ができます。</p>
+		</div>
+
+		<div class="card">
+			<h2>アンケート一覧</h2>
+			<p><a th:href="@{/surveys/new}">新規作成</a></p>
+			<table>
+				<thead>
+					<tr>
+						<th>ID</th>
+						<th>タイトル</th>
+						<th>説明</th>
+						<th>作成日時</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="survey : ${surveys}">
+						<td th:text="${survey.enqueteId}"></td>
+						<td th:text="${survey.enqueteName}"></td>
+						<td th:text="${survey.enqueteSubtext}"></td>
+						<td th:text="${survey.createDate}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</main>
+</body>
+
+</html>

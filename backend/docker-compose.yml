@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:18
+    container_name: survey-db
+    environment:
+      POSTGRES_DB: survey
+      POSTGRES_USER: survey
+      POSTGRES_PASSWORD: survey
+    ports:
+      - "5432:5432"
+    volumes:
+      - survey-db-data:/var/lib/postgresql
+
+volumes:
+  survey-db-data:
