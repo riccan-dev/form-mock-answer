@@ -1,29 +1,52 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import SurveyToolbar, { type SortKey, type StatusFilter } from './_components/SurveyToolbar';
 import SurveyCard from './_components/SurveyCard';
-import { MOCK_FORMS, daysUntil, duplicateForm, deleteForm } from '@/lib/mockForms';
+import { daysUntil, type FormRow } from '@/lib/mockForms';
+import { mapSurveyResponseToFormRow, type SurveyResponse } from '@/lib/surveyApi';
 
 export default function AdminSurveyListPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('すべて');
   const [sortKey, setSortKey] = useState<SortKey>('dueDate');
   const [searchQuery, setSearchQuery] = useState('');
-  const [version, setVersion] = useState(0);
+  const [forms, setForms] = useState<FormRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  function handleDuplicate(id: number) {
-    duplicateForm(id);
-    setVersion((v) => v + 1);
-  }
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/surveys')
+      .then((res) => {
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        return res.json();
+      })
+      .then((data: SurveyResponse[]) => {
+        if (cancelled) return;
+        setForms(data.map(mapSurveyResponseToFormRow));
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleDelete(id: number) {
-    deleteForm(id);
-    setVersion((v) => v + 1);
+    fetch(`/api/surveys/${id}`, { method: 'DELETE' }).then((res) => {
+      if (res.ok) {
+        setForms((prev) => prev.filter((f) => f.id !== id));
+      }
+    });
   }
 
   const visibleForms = useMemo(() => {
-    let forms = MOCK_FORMS.filter((form) => {
+    let filtered = forms.filter((form) => {
       if (statusFilter !== 'すべて' && form.status !== statusFilter) return false;
       if (searchQuery && !form.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
@@ -31,7 +54,7 @@ export default function AdminSurveyListPage() {
       return true;
     });
 
-    forms = [...forms].sort((a, b) => {
+    filtered = [...filtered].sort((a, b) => {
       if (sortKey === 'dueDate') {
         const aDays = daysUntil(a.dueDate) ?? Infinity;
         const bDays = daysUntil(b.dueDate) ?? Infinity;
@@ -45,8 +68,8 @@ export default function AdminSurveyListPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-    return forms;
-  }, [statusFilter, sortKey, searchQuery, version]);
+    return filtered;
+  }, [forms, statusFilter, sortKey, searchQuery]);
 
   return (
     <div className="container-fluid py-4" style={{ maxWidth: 1280 }}>
@@ -67,16 +90,15 @@ export default function AdminSurveyListPage() {
       />
 
       <div className="px-4">
-        {visibleForms.length === 0 ? (
+        {isLoading ? (
+          <div className="text-muted text-center py-5">読み込み中...</div>
+        ) : loadError ? (
+          <div className="text-danger text-center py-5">アンケート一覧の取得に失敗しました。</div>
+        ) : visibleForms.length === 0 ? (
           <div className="text-muted text-center py-5">該当するアンケートがありません。</div>
         ) : (
           visibleForms.map((form) => (
-            <SurveyCard
-              key={form.id}
-              form={form}
-              onDuplicate={handleDuplicate}
-              onDelete={handleDelete}
-            />
+            <SurveyCard key={form.id} form={form} onDelete={handleDelete} />
           ))
         )}
       </div>

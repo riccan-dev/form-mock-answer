@@ -185,50 +185,6 @@ export function findFormById(id: number): FormRow | undefined {
   return MOCK_FORMS.find((form) => form.id === id);
 }
 
-export function duplicateForm(id: number): FormRow | undefined {
-  const original = findFormById(id);
-  if (!original) return undefined;
-
-  const newId = Math.max(...MOCK_FORMS.map((form) => form.id)) + 1;
-  const copy: FormRow = {
-    ...original,
-    id: newId,
-    name: `${original.name}のコピー`,
-    status: '下書き',
-    targetDepartments: [...original.targetDepartments],
-    dueDate: undefined,
-    createdAt: offsetDate(0),
-    responseCount: 0,
-    totalCount: 0,
-    myStatus: undefined,
-    myAnswers: undefined,
-    questions: original.questions.map((question) => ({ ...question })),
-  };
-
-  MOCK_FORMS.push(copy);
-  return copy;
-}
-
-export function deleteForm(id: number): void {
-  const index = MOCK_FORMS.findIndex((form) => form.id === id);
-  if (index !== -1) MOCK_FORMS.splice(index, 1);
-}
-
-export type DistributionSettings = {
-  targetDepartments: string[];
-  distributionStartAt: string; // ISO date
-  dueDate: string; // ISO date
-};
-
-export function updateDistribution(id: number, settings: DistributionSettings): void {
-  const form = findFormById(id);
-  if (!form) return;
-  form.targetDepartments = settings.targetDepartments;
-  form.distributionStartAt = settings.distributionStartAt;
-  form.dueDate = settings.dueDate;
-  form.status = '配信中';
-}
-
 export function daysUntil(dueDateIso?: string): number | null {
   if (!dueDateIso) return null;
   const diffMs = new Date(dueDateIso).getTime() - Date.now();

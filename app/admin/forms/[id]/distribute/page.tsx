@@ -1,11 +1,12 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
-import { findFormById, updateDistribution } from '@/lib/mockForms';
+import type { FormRow } from '@/lib/mockForms';
+import { mapSurveyResponseToFormRow, type SurveyResponse } from '@/lib/surveyApi';
 import { DEPARTMENTS, getHeadcount } from '@/lib/departments';
 
 function toDatetimeLocal(dateIso?: string): string {
@@ -20,20 +21,38 @@ export default function DistributeFormPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const form = findFormById(Number(id));
   const router = useRouter();
 
-  const [isAllCompany, setIsAllCompany] = useState(
-    form?.targetDepartments.includes('全社') ?? false
-  );
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>(
-    form?.targetDepartments.filter((d) => d !== '全社') ?? []
-  );
+  const [form, setForm] = useState<FormRow | null | undefined>(undefined);
+  const [isAllCompany, setIsAllCompany] = useState(false);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [startAt, setStartAt] = useState(toDatetimeLocal());
-  const [dueAt, setDueAt] = useState(toDatetimeLocal(form?.dueDate));
+  const [dueAt, setDueAt] = useState(toDatetimeLocal());
   const [reminder3Days, setReminder3Days] = useState(true);
   const [reminderDayBefore, setReminderDayBefore] = useState(true);
   const [anonymity, setAnonymity] = useState<'anonymous' | 'named'>('named');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/surveys/${id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: SurveyResponse | null) => {
+        if (!data) {
+          setForm(null);
+          return;
+        }
+        const mapped = mapSurveyResponseToFormRow(data);
+        setForm(mapped);
+        setIsAllCompany(mapped.targetDepartments.includes('全社'));
+        setSelectedDepartments(mapped.targetDepartments.filter((d) => d !== '全社'));
+        setDueAt(toDatetimeLocal(mapped.dueDate));
+      })
+      .catch(() => setForm(null));
+  }, [id]);
+
+  if (form === undefined) {
+    return <div className="card-body">読み込み中...</div>;
+  }
 
   if (!form) {
     return <div className="card-body">ID: {id} のフォームは見つかりませんでした。</div>;
@@ -48,12 +67,21 @@ export default function DistributeFormPage({
   }
 
   function handleDistribute() {
-    updateDistribution(Number(id), {
-      targetDepartments: isAllCompany ? ['全社'] : selectedDepartments,
-      distributionStartAt: startAt.slice(0, 10),
-      dueDate: dueAt.slice(0, 10),
-    });
-    router.push('/admin');
+    setIsSubmitting(true);
+    fetch(`/api/surveys/${id}/distribution`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetDepartments: isAllCompany ? ['全社'] : selectedDepartments,
+        distributionStartAt: startAt.slice(0, 10),
+        dueDate: dueAt.slice(0, 10),
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        router.push('/admin');
+      })
+      .catch(() => setIsSubmitting(false));
   }
 
   return (
@@ -64,8 +92,8 @@ export default function DistributeFormPage({
           <Link href="/admin" className="btn btn-outline-secondary">
             キャンセル
           </Link>
-          <Button variant="primary" onClick={handleDistribute}>
-            配信する
+          <Button variant="primary" onClick={handleDistribute} disabled={isSubmitting}>
+            {isSubmitting ? '送信中...' : '配信する'}
           </Button>
         </div>
       </div>

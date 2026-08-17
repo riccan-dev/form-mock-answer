@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
-import { findFormById, isPastDue } from '@/lib/mockForms';
+import { isPastDue, type FormRow } from '@/lib/mockForms';
 import type { Answers, AnswerValue } from '@/lib/mockForms';
+import { mapSurveyResponseToFormRow, type SurveyResponse } from '@/lib/surveyApi';
+import { CURRENT_USER } from '@/lib/currentUser';
 import QuestionAnswerField from './_components/QuestionAnswerField';
 
 function draftKey(id: string) {
@@ -19,18 +21,31 @@ export default function RespondFormPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const form = findFormById(Number(id));
   const router = useRouter();
 
-  const [answers, setAnswers] = useState<Answers>(form?.myAnswers ?? {});
+  const [form, setForm] = useState<FormRow | null | undefined>(undefined);
+  const [answers, setAnswers] = useState<Answers>({});
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
 
   useEffect(() => {
+    fetch(`/api/surveys/${id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: SurveyResponse | null) => {
+        setForm(data ? mapSurveyResponseToFormRow(data) : null);
+      })
+      .catch(() => setForm(null));
+
     const raw = window.localStorage.getItem(draftKey(id));
     if (raw) {
       setAnswers(JSON.parse(raw));
     }
   }, [id]);
+
+  if (form === undefined) {
+    return <div className="card-body">読み込み中...</div>;
+  }
 
   if (!form) {
     return <div className="card-body">ID: {id} のフォームは見つかりませんでした。</div>;
@@ -60,8 +75,32 @@ export default function RespondFormPage({
   }
 
   function handleSubmit() {
-    window.localStorage.removeItem(draftKey(id));
-    router.push(`/respond/${id}/complete`);
+    setSubmitError(false);
+    setIsSubmitting(true);
+
+    const payload = {
+      respondentName: CURRENT_USER.name,
+      answers: Object.fromEntries(
+        Object.entries(answers).filter(
+          ([key, value]) => !key.endsWith('__other') && (typeof value === 'string' || Array.isArray(value))
+        )
+      ),
+    };
+
+    fetch(`/api/surveys/${id}/answers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        window.localStorage.removeItem(draftKey(id));
+        router.push(`/respond/${id}/complete`);
+      })
+      .catch(() => {
+        setSubmitError(true);
+        setIsSubmitting(false);
+      });
   }
 
   return (
@@ -93,14 +132,17 @@ export default function RespondFormPage({
               ))}
 
               <div className="d-flex align-items-center gap-3 pt-3 border-top">
-                <Button variant="outline-secondary" onClick={handleSaveDraft}>
+                <Button variant="outline-secondary" onClick={handleSaveDraft} disabled={isSubmitting}>
                   一時保存
                 </Button>
-                <Button variant="primary" onClick={handleSubmit}>
-                  回答を送信する
+                <Button variant="primary" onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? '送信中...' : '回答を送信する'}
                 </Button>
                 {savedAt && (
                   <span className="text-muted small">{savedAt} に一時保存しました</span>
+                )}
+                {submitError && (
+                  <span className="text-danger small">送信に失敗しました。もう一度お試しください。</span>
                 )}
               </div>
             </Form>

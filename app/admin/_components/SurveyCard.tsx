@@ -47,11 +47,10 @@ function deadlineText(form: FormRow, target: string): string {
 
 type Props = {
   form: FormRow;
-  onDuplicate: (id: number) => void;
   onDelete: (id: number) => void;
 };
 
-export default function SurveyCard({ form, onDuplicate, onDelete }: Props) {
+export default function SurveyCard({ form, onDelete }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   function handleConfirmDelete() {
@@ -85,6 +84,9 @@ export default function SurveyCard({ form, onDuplicate, onDelete }: Props) {
         )}
 
         <div className="d-flex gap-2">
+          <Link href={`/admin/forms/${form.id}/preview`} className="btn btn-outline-secondary btn-sm">
+            プレビュー
+          </Link>
           {form.status === '下書き' ? (
             <>
               <Link href={`/admin/forms/${form.id}/edit`} className="btn btn-outline-secondary btn-sm">
@@ -93,9 +95,6 @@ export default function SurveyCard({ form, onDuplicate, onDelete }: Props) {
               <Link href={`/admin/forms/${form.id}/distribute`} className="btn btn-primary btn-sm">
                 配信設定
               </Link>
-              <Button variant="outline-secondary" size="sm" onClick={() => onDuplicate(form.id)}>
-                複製
-              </Button>
               <Button
                 variant="outline-danger"
                 size="sm"
@@ -109,27 +108,15 @@ export default function SurveyCard({ form, onDuplicate, onDelete }: Props) {
               <Link href={`/admin/forms/${form.id}/results`} className="btn btn-outline-secondary btn-sm">
                 回答状況を見る
               </Link>
-              <Link href={`/admin/forms/${form.id}/edit`} className="btn btn-outline-secondary btn-sm">
-                編集
-              </Link>
               <Link href={`/admin/forms/${form.id}/distribute`} className="btn btn-outline-secondary btn-sm">
                 配信設定
               </Link>
-              <Button variant="outline-secondary" size="sm" onClick={() => onDuplicate(form.id)}>
-                複製
-              </Button>
             </>
           ) : (
             <>
               <Link href={`/admin/forms/${form.id}/results`} className="btn btn-outline-secondary btn-sm">
                 回答状況を見る
               </Link>
-              <Link href={`/admin/forms/${form.id}/edit`} className="btn btn-outline-secondary btn-sm">
-                編集
-              </Link>
-              <Button variant="outline-secondary" size="sm" onClick={() => onDuplicate(form.id)}>
-                複製
-              </Button>
             </>
           )}
         </div>
