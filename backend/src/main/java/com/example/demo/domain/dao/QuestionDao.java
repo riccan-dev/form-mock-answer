@@ -18,6 +18,9 @@ public interface QuestionDao {
 	List<Question> selectByEnqueteId(Integer enqueteId);
 
 	@Select
+	List<Question> selectByEnqueteIds(List<Integer> enqueteIds);
+
+	@Select
 	Question selectById(Integer questionId);
 
 	@Insert

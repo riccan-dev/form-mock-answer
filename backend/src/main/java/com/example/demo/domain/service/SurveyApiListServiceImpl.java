@@ -2,6 +2,7 @@ package com.example.demo.domain.service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,8 @@ import com.example.demo.domain.dto.SurveyResponse;
 import com.example.demo.domain.entity.Choice;
 import com.example.demo.domain.entity.Dept;
 import com.example.demo.domain.entity.Enquete;
+import com.example.demo.domain.entity.EnqueteAnswerCount;
+import com.example.demo.domain.entity.EnqueteDept;
 import com.example.demo.domain.entity.EnqueteState;
 import com.example.demo.domain.entity.Question;
 import com.example.demo.domain.entity.QuestionType;
@@ -61,17 +64,48 @@ public class SurveyApiListServiceImpl implements SurveyApiListService {
 
 	@Override
 	public List<SurveyResponse> listSurveys(String respondentName) {
+		List<Enquete> enquetes = enqueteDao.selectAll();
+		List<Integer> enqueteIds = enquetes.stream().map(Enquete::getEnqueteId).toList();
+
 		List<Dept> departments = deptDao.selectAll();
-		Set<String> allDeptNames = departments.stream().map(Dept::getDeptName).collect(Collectors.toSet());
+		Map<Integer, String> deptNameById = departments.stream()
+				.collect(Collectors.toMap(Dept::getDeptId, Dept::getDeptName));
+		Set<String> allDeptNames = new HashSet<>(deptNameById.values());
 		Map<Integer, String> stateNameById = enqueteStateDao.selectAll().stream()
 				.collect(Collectors.toMap(EnqueteState::getEnqueteStateId, EnqueteState::getEnqueteState));
 		Map<Integer, String> typeCodeById = questionTypeDao.selectAll().stream()
 				.collect(Collectors.toMap(QuestionType::getQuestionTypeId, QuestionType::getQuestionType));
 
+		Map<Integer, List<String>> deptNamesByEnqueteId = enqueteDeptDao.selectByEnqueteIds(enqueteIds).stream()
+				.collect(Collectors.groupingBy(EnqueteDept::getEnqueteId,
+						Collectors.mapping(ed -> deptNameById.get(ed.getDeptId()), Collectors.toList())));
+		Map<Integer, Long> responseCountByEnqueteId = enqueteAnswerDao.countByEnqueteIds(enqueteIds).stream()
+				.collect(Collectors.toMap(EnqueteAnswerCount::getEnqueteId, EnqueteAnswerCount::getAnswerCount));
+		Set<Integer> answeredEnqueteIds = respondentName == null ? Set.of()
+				: new HashSet<>(enqueteAnswerDao.selectAnsweredEnqueteIds(respondentName, enqueteIds));
+		Map<Integer, List<QuestionResponse>> questionsByEnqueteId = listQuestionsByEnqueteIds(enqueteIds,
+				typeCodeById);
+
 		List<SurveyResponse> result = new ArrayList<>();
-		for (Enquete enquete : enqueteDao.selectAll()) {
-			result.add(buildSurveyResponse(enquete, departments, allDeptNames, stateNameById, typeCodeById,
-					respondentName));
+		for (Enquete enquete : enquetes) {
+			Integer enqueteId = enquete.getEnqueteId();
+			List<String> targetDepartments = resolveTargetDepartments(
+					deptNamesByEnqueteId.getOrDefault(enqueteId, List.of()), allDeptNames);
+
+			result.add(SurveyResponse.builder()
+					.id(enqueteId)
+					.title(enquete.getEnqueteName())
+					.description(enquete.getEnqueteSubtext())
+					.status(effectiveStatus(enquete, stateNameById))
+					.targetDepartments(targetDepartments)
+					.dueDate(enquete.getFinishDate())
+					.distributionStartedAt(enquete.getStartDate())
+					.createdAt(enquete.getCreateDate())
+					.responseCount(responseCountByEnqueteId.getOrDefault(enqueteId, 0L))
+					.totalCount(totalHeadcount(targetDepartments, departments))
+					.answeredByRespondent(respondentName == null ? null : answeredEnqueteIds.contains(enqueteId))
+					.questions(questionsByEnqueteId.getOrDefault(enqueteId, List.of()))
+					.build());
 		}
 		return result;
 	}
@@ -95,7 +129,8 @@ public class SurveyApiListServiceImpl implements SurveyApiListService {
 
 	private SurveyResponse buildSurveyResponse(Enquete enquete, List<Dept> departments, Set<String> allDeptNames,
 			Map<Integer, String> stateNameById, Map<Integer, String> typeCodeById, String respondentName) {
-		List<String> targetDepartments = resolveTargetDepartments(enquete.getEnqueteId(), allDeptNames);
+		List<String> targetDepartments = resolveTargetDepartments(
+				enqueteDeptDao.selectDeptNamesByEnqueteId(enquete.getEnqueteId()), allDeptNames);
 
 		Boolean answeredByRespondent = respondentName == null ? null
 				: enqueteAnswerDao.countByEnqueteIdAndRespondentName(enquete.getEnqueteId(), respondentName) > 0;
@@ -116,8 +151,7 @@ public class SurveyApiListServiceImpl implements SurveyApiListService {
 				.build();
 	}
 
-	private List<String> resolveTargetDepartments(Integer enqueteId, Set<String> allDeptNames) {
-		List<String> names = enqueteDeptDao.selectDeptNamesByEnqueteId(enqueteId);
+	private List<String> resolveTargetDepartments(List<String> names, Set<String> allDeptNames) {
 		if (!names.isEmpty() && new HashSet<>(names).equals(allDeptNames)) {
 			return List.of(ALL_COMPANY);
 		}
@@ -150,29 +184,49 @@ public class SurveyApiListServiceImpl implements SurveyApiListService {
 				.collect(Collectors.groupingBy(Choice::getQuestionId,
 						Collectors.mapping(Choice::getChoiceText, Collectors.toList())));
 
-		List<QuestionResponse> questionResponses = new ArrayList<>();
+		return questions.stream()
+				.map(q -> buildQuestionResponse(q, typeCodeById,
+						choiceTextsByQuestionId.getOrDefault(q.getQuestionId(), List.of())))
+				.toList();
+	}
+
+	private Map<Integer, List<QuestionResponse>> listQuestionsByEnqueteIds(List<Integer> enqueteIds,
+			Map<Integer, String> typeCodeById) {
+		List<Question> questions = questionDao.selectByEnqueteIds(enqueteIds);
+		List<Integer> questionIds = questions.stream().map(Question::getQuestionId).toList();
+		Map<Integer, List<String>> choiceTextsByQuestionId = choiceDao.selectByQuestionIds(questionIds).stream()
+				.collect(Collectors.groupingBy(Choice::getQuestionId,
+						Collectors.mapping(Choice::getChoiceText, Collectors.toList())));
+
+		Map<Integer, List<QuestionResponse>> result = new HashMap<>();
 		for (Question question : questions) {
-			String type = typeCodeById.get(question.getQuestionTypeId());
 			List<String> choiceTexts = choiceTextsByQuestionId.getOrDefault(question.getQuestionId(), List.of());
-
-			QuestionResponse.QuestionResponseBuilder builder = QuestionResponse.builder()
-					.id(question.getQuestionId())
-					.type(type)
-					.label(question.getQuestionText())
-					.matrixRows(List.of())
-					.allowOther(false);
-
-			if ("scale".equals(type)) {
-				builder.scaleMax(choiceTexts.size())
-						.scaleMinLabel(choiceTexts.isEmpty() ? "" : choiceTexts.get(0))
-						.scaleMaxLabel(choiceTexts.isEmpty() ? "" : choiceTexts.get(choiceTexts.size() - 1))
-						.options(null);
-			} else {
-				builder.options(choiceTexts);
-			}
-
-			questionResponses.add(builder.build());
+			result.computeIfAbsent(question.getEnqueteId(), k -> new ArrayList<>())
+					.add(buildQuestionResponse(question, typeCodeById, choiceTexts));
 		}
-		return questionResponses;
+		return result;
+	}
+
+	private QuestionResponse buildQuestionResponse(Question question, Map<Integer, String> typeCodeById,
+			List<String> choiceTexts) {
+		String type = typeCodeById.get(question.getQuestionTypeId());
+
+		QuestionResponse.QuestionResponseBuilder builder = QuestionResponse.builder()
+				.id(question.getQuestionId())
+				.type(type)
+				.label(question.getQuestionText())
+				.matrixRows(List.of())
+				.allowOther(false);
+
+		if ("scale".equals(type)) {
+			builder.scaleMax(choiceTexts.size())
+					.scaleMinLabel(choiceTexts.isEmpty() ? "" : choiceTexts.get(0))
+					.scaleMaxLabel(choiceTexts.isEmpty() ? "" : choiceTexts.get(choiceTexts.size() - 1))
+					.options(null);
+		} else {
+			builder.options(choiceTexts);
+		}
+
+		return builder.build();
 	}
 }

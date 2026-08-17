@@ -17,6 +17,9 @@ public interface EnqueteDeptDao {
 	@Select
 	List<String> selectDeptNamesByEnqueteId(Integer enqueteId);
 
+	@Select
+	List<EnqueteDept> selectByEnqueteIds(List<Integer> enqueteIds);
+
 	@Insert
 	int insert(EnqueteDept enqueteDept);
 
