@@ -12,6 +12,7 @@
 ## プログラム機能構成図
 
 - [管理者画面 アンケート一覧機能](frontend/docs/admin-list-function-diagram.md)
+- [Entity / Dao / Dto の役割と一覧](backend/docs/entity-dao-dto-overview.md)
 
 ## 起動方法
 
