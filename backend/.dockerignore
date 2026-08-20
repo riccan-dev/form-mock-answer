@@ -1,0 +1,12 @@
+build/
+.gradle/
+bin/
+.settings/
+.classpath
+.factorypath
+.project
+docs/
+*.md
+.git
+Dockerfile
+.dockerignore
