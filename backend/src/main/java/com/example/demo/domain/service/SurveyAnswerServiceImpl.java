@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.demo.domain.dao.ChoiceAnswerDao;
 import com.example.demo.domain.dao.ChoiceDao;
 import com.example.demo.domain.dao.EnqueteAnswerDao;
+import com.example.demo.domain.dao.EsqUserDao;
 import com.example.demo.domain.dao.QuestionAnswerDao;
 import com.example.demo.domain.dao.QuestionDao;
 import com.example.demo.domain.dao.QuestionTypeDao;
@@ -19,6 +20,7 @@ import com.example.demo.domain.dto.AnswerSubmitResponse;
 import com.example.demo.domain.entity.Choice;
 import com.example.demo.domain.entity.ChoiceAnswer;
 import com.example.demo.domain.entity.EnqueteAnswer;
+import com.example.demo.domain.entity.EsqUser;
 import com.example.demo.domain.entity.Question;
 import com.example.demo.domain.entity.QuestionAnswer;
 import com.example.demo.domain.entity.QuestionType;
@@ -29,16 +31,18 @@ public class SurveyAnswerServiceImpl implements SurveyAnswerService {
 	private static final Set<String> FREE_TEXT_TYPES = Set.of("text", "textarea", "number", "date");
 
 	private final EnqueteAnswerDao enqueteAnswerDao;
+	private final EsqUserDao esqUserDao;
 	private final QuestionDao questionDao;
 	private final QuestionTypeDao questionTypeDao;
 	private final ChoiceDao choiceDao;
 	private final QuestionAnswerDao questionAnswerDao;
 	private final ChoiceAnswerDao choiceAnswerDao;
 
-	public SurveyAnswerServiceImpl(EnqueteAnswerDao enqueteAnswerDao, QuestionDao questionDao,
+	public SurveyAnswerServiceImpl(EnqueteAnswerDao enqueteAnswerDao, EsqUserDao esqUserDao, QuestionDao questionDao,
 			QuestionTypeDao questionTypeDao, ChoiceDao choiceDao, QuestionAnswerDao questionAnswerDao,
 			ChoiceAnswerDao choiceAnswerDao) {
 		this.enqueteAnswerDao = enqueteAnswerDao;
+		this.esqUserDao = esqUserDao;
 		this.questionDao = questionDao;
 		this.questionTypeDao = questionTypeDao;
 		this.choiceDao = choiceDao;
@@ -48,13 +52,16 @@ public class SurveyAnswerServiceImpl implements SurveyAnswerService {
 
 	@Override
 	@Transactional
-	public AnswerSubmitResponse submit(Integer enqueteId, AnswerSubmitRequest request) {
+	public AnswerSubmitResponse submit(Integer enqueteId, String esqId, AnswerSubmitRequest request) {
 		Map<Integer, String> typeCodeById = questionTypeDao.selectAll().stream()
 				.collect(Collectors.toMap(QuestionType::getQuestionTypeId, QuestionType::getQuestionType));
 
+		EsqUser esqUser = esqUserDao.selectById(esqId);
+
 		EnqueteAnswer enqueteAnswer = new EnqueteAnswer();
 		enqueteAnswer.setEnqueteId(enqueteId);
-		enqueteAnswer.setRespondentName(request.getRespondentName());
+		enqueteAnswer.setEsqId(esqId);
+		enqueteAnswer.setRespondentName(esqUser.getUserName());
 		enqueteAnswerDao.insert(enqueteAnswer);
 
 		Map<String, Object> answers = request.getAnswers();

@@ -1,29 +1,38 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import Form from 'react-bootstrap/Form';
 import AssignedSurveyCard from './_components/AssignedSurveyCard';
 import { daysUntil, isAssignedToDepartment, type FormRow } from '@/lib/mockForms';
 import { mapSurveyResponseToFormRow, type SurveyResponse } from '@/lib/surveyApi';
-import { CURRENT_USER } from '@/lib/currentUser';
+import { useAuth } from '@/lib/AuthContext';
 
 type StatusFilter = 'すべて' | '未回答' | '回答済み';
 
 export default function RespondPage() {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('すべて');
   const [forms, setForms] = useState<FormRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/surveys?respondentName=${encodeURIComponent(CURRENT_USER.name)}`)
+    if (isAuthLoading) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    fetch('/api/surveys')
       .then((res) => (res.ok ? res.json() : []))
       .then((data: SurveyResponse[]) => setForms(data.map(mapSurveyResponseToFormRow)))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [user, isAuthLoading]);
 
   const assignedForms = useMemo(() => {
+    if (!user) return [];
+
     const assigned = forms.filter(
-      (form) => form.status !== '下書き' && isAssignedToDepartment(form, CURRENT_USER.department)
+      (form) => form.status !== '下書き' && isAssignedToDepartment(form, user.department)
     );
 
     const filtered = assigned.filter((form) => {
@@ -37,14 +46,28 @@ export default function RespondPage() {
       const bDays = daysUntil(b.dueDate) ?? Infinity;
       return aDays - bDays;
     });
-  }, [forms, statusFilter]);
+  }, [forms, statusFilter, user]);
+
+  if (isAuthLoading) {
+    return <div className="text-muted text-center py-5">読み込み中...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="container-fluid py-4" style={{ maxWidth: 800 }}>
+        <div className="text-muted text-center py-5">
+          アンケートに回答するには<Link href="/login">ログイン</Link>してください。
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container-fluid py-4" style={{ maxWidth: 800 }}>
       <div className="px-4 py-3">
         <h1 className="fs-4 fw-bold mb-1">割当アンケート一覧</h1>
         <p className="text-muted small mb-0">
-          {CURRENT_USER.department}宛てに配布されたアンケートを表示しています。
+          {user.department}宛てに配布されたアンケートを表示しています。
         </p>
       </div>
 

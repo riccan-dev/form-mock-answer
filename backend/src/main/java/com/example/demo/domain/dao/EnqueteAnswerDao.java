@@ -18,13 +18,13 @@ public interface EnqueteAnswerDao {
 	long countByEnqueteId(Integer enqueteId);
 
 	@Select
-	long countByEnqueteIdAndRespondentName(Integer enqueteId, String respondentName);
+	long countByEnqueteIdAndEsqId(Integer enqueteId, String esqId);
 
 	@Select
 	List<EnqueteAnswerCount> countByEnqueteIds(List<Integer> enqueteIds);
 
 	@Select
-	List<Integer> selectAnsweredEnqueteIds(String respondentName, List<Integer> enqueteIds);
+	List<Integer> selectAnsweredEnqueteIds(String esqId, List<Integer> enqueteIds);
 
 	@Select
 	EnqueteAnswer selectById(Integer enqueteAnswerId);

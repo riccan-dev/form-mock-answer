@@ -32,6 +32,9 @@ public class EnqueteAnswer {
 	@Column(name = "respondent_name")
 	private String respondentName;
 
+	@Column(name = "esq_id")
+	private String esqId;
+
 	@Column(name = "answer_date", insertable = false)
 	private LocalDateTime answerDate;
 }

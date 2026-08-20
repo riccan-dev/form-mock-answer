@@ -4,4 +4,4 @@ from
   enquete_answer
 where
   enquete_id = /* enqueteId */0
-  and respondent_name = /* respondentName */''
+  and esq_id = /* esqId */''

@@ -1,12 +1,12 @@
-const API_BASE_URL = process.env.SURVEY_API_BASE_URL ?? 'http://localhost:8080';
+import { backendUrl, forwardedHeaders, withForwardedCookies } from '@/lib/backendProxy';
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.text();
 
-  const res = await fetch(`${API_BASE_URL}/api/surveys/${id}/distribution`, {
+  const res = await fetch(backendUrl(`/api/surveys/${id}/distribution`), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: forwardedHeaders(request, { 'Content-Type': 'application/json' }),
     body,
     cache: 'no-store',
   });
@@ -16,5 +16,5 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const data = await res.json();
-  return Response.json(data, { status: res.status });
+  return withForwardedCookies(res, Response.json(data, { status: res.status }));
 }

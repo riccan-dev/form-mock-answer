@@ -6,6 +6,5 @@ import lombok.Data;
 
 @Data
 public class AnswerSubmitRequest {
-	private String respondentName;
 	private Map<String, Object> answers;
 }

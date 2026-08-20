@@ -1,10 +1,11 @@
-const API_BASE_URL = process.env.SURVEY_API_BASE_URL ?? 'http://localhost:8080';
+import { backendUrl, forwardedHeaders, withForwardedCookies } from '@/lib/backendProxy';
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const res = await fetch(`${API_BASE_URL}/api/surveys/${id}`, {
+  const res = await fetch(backendUrl(`/api/surveys/${id}`), {
     method: 'GET',
+    headers: forwardedHeaders(request),
     cache: 'no-store',
   });
 
@@ -13,16 +14,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const data = await res.json();
-  return Response.json(data, { status: res.status });
+  return withForwardedCookies(res, Response.json(data, { status: res.status }));
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.text();
 
-  const res = await fetch(`${API_BASE_URL}/api/surveys/${id}`, {
+  const res = await fetch(backendUrl(`/api/surveys/${id}`), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: forwardedHeaders(request, { 'Content-Type': 'application/json' }),
     body,
     cache: 'no-store',
   });
@@ -32,16 +33,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const data = await res.json();
-  return Response.json(data, { status: res.status });
+  return withForwardedCookies(res, Response.json(data, { status: res.status }));
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const res = await fetch(`${API_BASE_URL}/api/surveys/${id}`, {
+  const res = await fetch(backendUrl(`/api/surveys/${id}`), {
     method: 'DELETE',
+    headers: forwardedHeaders(request),
     cache: 'no-store',
   });
 
-  return new Response(null, { status: res.status });
+  return withForwardedCookies(res, new Response(null, { status: res.status }));
 }

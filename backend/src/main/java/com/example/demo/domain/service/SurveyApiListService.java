@@ -5,7 +5,7 @@ import java.util.List;
 import com.example.demo.domain.dto.SurveyResponse;
 
 public interface SurveyApiListService {
-	List<SurveyResponse> listSurveys(String respondentName);
+	List<SurveyResponse> listSurveys(String esqId);
 
 	SurveyResponse getById(Integer enqueteId);
 }

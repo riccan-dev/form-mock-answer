@@ -1,13 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { CURRENT_USER } from '@/lib/currentUser';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const isAdmin = pathname.startsWith('/admin');
   const isRespond = pathname.startsWith('/respond');
+
+  async function handleLogout() {
+    await logout();
+    router.push('/login');
+  }
 
   return (
     <header className="d-flex align-items-center justify-content-between px-4 py-2 bg-white border-bottom">
@@ -37,18 +44,26 @@ export default function Header() {
       </div>
 
       <div className="d-flex align-items-center gap-2">
-        <div
-          className="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white"
-          style={{ width: 28, height: 28, fontSize: 12 }}
-        >
-          {CURRENT_USER.initial}
-        </div>
-        <span className="small">
-          {CURRENT_USER.name} さん（{CURRENT_USER.department}）
-        </span>
-        <a href="/login" className="small ms-2">
-          ログアウト
-        </a>
+        {user ? (
+          <>
+            <div
+              className="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white"
+              style={{ width: 28, height: 28, fontSize: 12 }}
+            >
+              {user.userName.charAt(0)}
+            </div>
+            <span className="small">
+              {user.userName} さん（{user.department}）
+            </span>
+            <button type="button" onClick={handleLogout} className="btn btn-link btn-sm small ms-2 p-0">
+              ログアウト
+            </button>
+          </>
+        ) : (
+          <Link href="/login" className="small">
+            ログイン
+          </Link>
+        )}
       </div>
     </header>
   );

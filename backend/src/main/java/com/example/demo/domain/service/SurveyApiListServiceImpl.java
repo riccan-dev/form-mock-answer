@@ -63,7 +63,7 @@ public class SurveyApiListServiceImpl implements SurveyApiListService {
 	}
 
 	@Override
-	public List<SurveyResponse> listSurveys(String respondentName) {
+	public List<SurveyResponse> listSurveys(String esqId) {
 		List<Enquete> enquetes = enqueteDao.selectAll();
 		List<Integer> enqueteIds = enquetes.stream().map(Enquete::getEnqueteId).toList();
 
@@ -81,8 +81,8 @@ public class SurveyApiListServiceImpl implements SurveyApiListService {
 						Collectors.mapping(ed -> deptNameById.get(ed.getDeptId()), Collectors.toList())));
 		Map<Integer, Long> responseCountByEnqueteId = enqueteAnswerDao.countByEnqueteIds(enqueteIds).stream()
 				.collect(Collectors.toMap(EnqueteAnswerCount::getEnqueteId, EnqueteAnswerCount::getAnswerCount));
-		Set<Integer> answeredEnqueteIds = respondentName == null ? Set.of()
-				: new HashSet<>(enqueteAnswerDao.selectAnsweredEnqueteIds(respondentName, enqueteIds));
+		Set<Integer> answeredEnqueteIds = esqId == null ? Set.of()
+				: new HashSet<>(enqueteAnswerDao.selectAnsweredEnqueteIds(esqId, enqueteIds));
 		Map<Integer, List<QuestionResponse>> questionsByEnqueteId = listQuestionsByEnqueteIds(enqueteIds,
 				typeCodeById);
 
@@ -103,7 +103,7 @@ public class SurveyApiListServiceImpl implements SurveyApiListService {
 					.createdAt(enquete.getCreateDate())
 					.responseCount(responseCountByEnqueteId.getOrDefault(enqueteId, 0L))
 					.totalCount(totalHeadcount(targetDepartments, departments))
-					.answeredByRespondent(respondentName == null ? null : answeredEnqueteIds.contains(enqueteId))
+					.answeredByRespondent(esqId == null ? null : answeredEnqueteIds.contains(enqueteId))
 					.questions(questionsByEnqueteId.getOrDefault(enqueteId, List.of()))
 					.build());
 		}
@@ -128,12 +128,12 @@ public class SurveyApiListServiceImpl implements SurveyApiListService {
 	}
 
 	private SurveyResponse buildSurveyResponse(Enquete enquete, List<Dept> departments, Set<String> allDeptNames,
-			Map<Integer, String> stateNameById, Map<Integer, String> typeCodeById, String respondentName) {
+			Map<Integer, String> stateNameById, Map<Integer, String> typeCodeById, String esqId) {
 		List<String> targetDepartments = resolveTargetDepartments(
 				enqueteDeptDao.selectDeptNamesByEnqueteId(enquete.getEnqueteId()), allDeptNames);
 
-		Boolean answeredByRespondent = respondentName == null ? null
-				: enqueteAnswerDao.countByEnqueteIdAndRespondentName(enquete.getEnqueteId(), respondentName) > 0;
+		Boolean answeredByRespondent = esqId == null ? null
+				: enqueteAnswerDao.countByEnqueteIdAndEsqId(enquete.getEnqueteId(), esqId) > 0;
 
 		return SurveyResponse.builder()
 				.id(enquete.getEnqueteId())

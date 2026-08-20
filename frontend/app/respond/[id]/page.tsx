@@ -8,7 +8,7 @@ import Form from 'react-bootstrap/Form';
 import { isPastDue, type FormRow } from '@/lib/mockForms';
 import type { Answers, AnswerValue } from '@/lib/mockForms';
 import { mapSurveyResponseToFormRow, type SurveyResponse } from '@/lib/surveyApi';
-import { CURRENT_USER } from '@/lib/currentUser';
+import { useAuth } from '@/lib/AuthContext';
 import QuestionAnswerField from './_components/QuestionAnswerField';
 
 function draftKey(id: string) {
@@ -22,6 +22,7 @@ export default function RespondFormPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const [form, setForm] = useState<FormRow | null | undefined>(undefined);
   const [answers, setAnswers] = useState<Answers>({});
@@ -43,12 +44,20 @@ export default function RespondFormPage({
     }
   }, [id]);
 
-  if (form === undefined) {
+  if (form === undefined || isAuthLoading) {
     return <div className="card-body">読み込み中...</div>;
   }
 
   if (!form) {
     return <div className="card-body">ID: {id} のフォームは見つかりませんでした。</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="card-body">
+        回答するには<Link href="/login">ログイン</Link>してください。
+      </div>
+    );
   }
 
   if (form.status === '回収終了' || isPastDue(form)) {
@@ -79,7 +88,6 @@ export default function RespondFormPage({
     setIsSubmitting(true);
 
     const payload = {
-      respondentName: CURRENT_USER.name,
       answers: Object.fromEntries(
         Object.entries(answers).filter(
           ([key, value]) => !key.endsWith('__other') && (typeof value === 'string' || Array.isArray(value))

@@ -3,5 +3,5 @@ select distinct
 from
   enquete_answer
 where
-  respondent_name = /* respondentName */''
+  esq_id = /* esqId */''
   and enquete_id in /* enqueteIds */(0)

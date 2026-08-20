@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.example.demo.domain.dto.AnswerSubmitRequest;
 import com.example.demo.domain.dto.AnswerSubmitResponse;
@@ -61,8 +62,8 @@ public class SurveyApiController {
 	}
 
 	@GetMapping
-	public List<SurveyResponse> list(@RequestParam(required = false) String respondentName) {
-		return surveyApiListService.listSurveys(respondentName);
+	public List<SurveyResponse> list(HttpServletRequest httpRequest) {
+		return surveyApiListService.listSurveys(AuthApiController.currentEsqId(httpRequest));
 	}
 
 	@GetMapping("/{id}")
@@ -87,8 +88,12 @@ public class SurveyApiController {
 
 	@PostMapping("/{id}/answers")
 	public ResponseEntity<AnswerSubmitResponse> submitAnswer(@PathVariable Integer id,
-			@RequestBody AnswerSubmitRequest request) {
-		AnswerSubmitResponse response = surveyAnswerService.submit(id, request);
+			@RequestBody AnswerSubmitRequest request, HttpServletRequest httpRequest) {
+		String esqId = AuthApiController.currentEsqId(httpRequest);
+		if (esqId == null) {
+			return ResponseEntity.status(401).build();
+		}
+		AnswerSubmitResponse response = surveyAnswerService.submit(id, esqId, request);
 		return ResponseEntity.status(201).body(response);
 	}
 

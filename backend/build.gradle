@@ -31,6 +31,9 @@ dependencies {
 	implementation 'org.seasar.doma.boot:doma-spring-boot-starter:3.0.0'
 	annotationProcessor 'org.seasar.doma:doma-processor:3.5.0'
 
+	// パスワードハッシュ化(BCrypt)のみ利用。spring-boot-starter-securityは導入しない(全APIが認証必須になってしまうため)
+	implementation 'org.springframework.security:spring-security-crypto'
+
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.postgresql:postgresql'
