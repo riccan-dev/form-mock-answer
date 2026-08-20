@@ -43,12 +43,14 @@ graph LR
 ```mermaid
 graph LR
   User[利用者] --> ALB[ALB]
-  ALB --> ECS_FE["ECS Fargate\nfrontendコンテナ"]
-  ALB --> ECS_BE["ECS Fargate\nbackendコンテナ"]
+  ALB -- "/api/* 以外" --> ECS_FE["ECS Fargate\nfrontendコンテナ"]
+  ALB -- "/api/*" --> ECS_BE["ECS Fargate\nbackendコンテナ"]
   ECR_FE[(ECR: frontend)] -.イメージ取得.-> ECS_FE
   ECR_BE[(ECR: backend)] -.イメージ取得.-> ECS_BE
   ECS_BE -- JDBC --> Aurora[(Aurora\nPostgreSQL互換)]
 ```
+
+詳しい構築手順は [docs/aws-account-setup.md](docs/aws-account-setup.md) を参照。
 
 ## プログラム機能構成図
 
